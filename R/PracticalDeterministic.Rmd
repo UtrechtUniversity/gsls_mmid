@@ -1,0 +1,262 @@
+---
+title: "Computer Practical ‘Deterministic models of infectious disease dYnamics’."
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+# Introduction
+
+The purpose of this practical is to obtain a better understanding of the dYnamics of infections in large populations. We will focus on a general situation, where some infection (e.g. avian influenza) is introduced in a population by infection of one individual from outside. This individual becomes infectious and starts spreading the virus to other members of the population. This spreading can be modelled by a compartmental SIR model, a model in which all individuals are at any time in one of the compartments (or states) S, I, and R. Before infection, everyone is Susceptible. After infection, people become Infectious to others that are still susceptible. Infected people then develop an immune response and Recover and stay immune for this particular infection during the rest of their lives (at least, as long as the virus is present in the population). 
+
+1. Deterministic SIR model.
+
+The modelling will be done here by using the R package deSolve, that numerically solves differential equations. 
+
+The first time you use this package, make sure you have installed and loaded it:
+```{r echo = TRUE}
+#install.packages("deSolve")
+#install.packages("rootSolve")
+library(deSolve)
+library(rootSolve)
+```
+
+The differential equations of the SIR model, parameters and initial values look like this: 
+
+```{r echo = TRUE}
+
+##########################################################################
+
+#Ordinary differential Equations
+sir <- function(Time, State, Pars){
+ with(as.list(c(State,Pars)),{
+  dX <- -1 * beta * X * Y / sum(State)
+  dY <- beta * X * Y / sum(State)  - gamma * Y
+  dZ <- gamma * Y
+  return(list(c(dX,dY,dZ)))
+ })
+}
+
+
+#Parameters
+pars <- c(beta = 0.6, #beta = transmission rate
+          gamma = 0.2 #gamma = recovery rate
+          )
+#initial values
+N0 = 30000 #population size
+Y0 = 1 #initial fraction infected 
+Z0 = 0# initial fraction recovered, 
+X0 = N0 - Y0 - Z0
+init <- c(X = X0,Y = Y0,Z = Z0)
+
+
+```
+
+- Do you understand this code? 
+
+
+Now you can run the code and plot the epidemic curve:
+
+```{r echo = TRUE}
+
+#Some simulation settings
+dt = 0.5#timestep for storing data
+sim_duration  = 150 #length of the simulation
+times <- seq(0, sim_duration, by = dt)
+
+
+#Solve the ordinary differential equations
+ode.out <- ode(init, times, sir, pars) 
+
+#plot X, Y, and Z against time
+plot(x = ode.out[,1], y = ode.out[,2], type = "l", xlab = "time", ylab = "animals", col = "purple",lwd =2)
+lines(x = ode.out[,1], y = ode.out[,3], type = "l", xlab = "time", ylab = "animals", col = "red",lwd =2)
+lines(x = ode.out[,1], y = ode.out[,4], type = "l", xlab = "time", ylab = "animals", col = "palegreen1",lwd =2)
+legend(x = 60, y = 15000, c("X","Y","Z"),lwd =2, col = c("purple", "red", "palegreen1"))
+```
+
+A small explanation:
+- the function sir is defined, which contains the model equations. If you want to simulate a different model, you should define each differential equation in a separate line, and end with the list containing all equation names. 
+- the vector pars is defined, which contains the transmission rate parameter (beta), the recovery rate  (gamma),
+- the vector  init contains the initial number of infecteds Y0, the initial number of recovereds Z0, the initial number of susceptibles Y0 population size (30 000) minus the infecteds and recoverds.
+- the vector times gives the times to store the time points of the simulation with time steps of the simulation dt and simulation length sim_duration.
+
+In object ode.out we store the simulation result. These can be plotted as count-versus time or by plotting a trajectory in the phase plane of X and Y. 
+
+Run the  model with the default values.
+
+(a) 
+- How long does the outbreak take? 
+- What is the peak number of infected people? 
+- How many people are still susceptible at the end of the outbreak? 
+Change the values for beta and gamma and see how the outbreak dYnamics changes.
+
+If you enter the following code after you ran a simulation and press enter, you can see how the simulation is stored in a table. This makes it possible to see exactly how many individuals are still susceptible at the end of the outbreak. 
+```{r echo = TRUE}
+#get last 10 lines
+tail(ode.out)
+```
+
+
+Using the code below you can plot the number of susceptibles against the number of infecteds.
+- Where does this curve start (i.e. t = 0) ?
+
+```{r echo = TRUE}
+#plot  X against Y
+plot(x = ode.out[,2], y = ode.out[,3], type = "l", xlab ="X", ylab ="Y")
+```
+
+(b) Look at the plots produced by the above commands, after running the simulation given above question (a). 
+- Where are start and end of the outbreak in the graph? 
+- Where is the peak? 
+- How many individuals are still susceptible at the end of the outbreak?
+- The plot connects all values of  the simulation with an arrow. Why are the arrow heads at the top of the graph further apart than the points close to the X-axis?
+
+In the lectures we have learnt that the basic reproduction ratio R0 is an important parameter in infectious disease epidemiology: it is the mean number of new secondary cases caused by a single primary case in a susceptible population. Another important parameter is the duration of the infectious period D. In the SIR-model, R0 = beta/gamma, and D = 1/gamma. 
+
+(c) Simulate outbreaks with several combinations of beta and gamma resulting in R0 = 3, and with several combinations resulting in R0 = 1.5, or R0 = 5 (or other values of R0 as you like). Look at the plots, but also directly at the output table. How does the disease dYnamics (final size, duration of the outbreak) depend on the values of R0? How do the disease dYnamics depend on the duration of the infectious period D? 
+
+Now we will create a plot for R0 and the final size. To this end we will use the function runsteady of the package rootSolve. 
+
+```{r echo = TRUE}
+#plot final size against R0.
+# For simplicity we set gamma = 1 so that beta = R0
+finalsize <- NULL
+for(R0 in seq(0,2,0.05)){
+  #add the outcomes to the results
+finalsize <- rbind(finalsize, 
+data.frame(R0= R0, #R0 value	                      
+#final size at equilibrium (Y ==0)
+finalsize = runsteady(y = init, func = sir, 
+parms = c(beta = R0, gamma = 1))$y["Z"])) 
+}
+plot(finalsize$R0,finalsize$finalsize, type ="l")
+```
+
+(d) Create a plot for R0 and the final size. StudY the effect of the initial number of infected individuals “Y” on the final size. 
+Why is taking x0 – X a better expression for the final size? 
+
+(e) Change the initial conditions to Y0 = 1 and Z0 = 70000 (with beta = 0.6 and gamma = 0.2). What is the final size of the outbreak, ie how many animals got infected? Try more initial conditions, and more combinations of beta and gamma. What is the relation between R0, initial condition, and final size?
+
+
+Now make the assumption that after infection, people first become latently infected (Exposed), before becoming Infectious. In the model, we add an extra E compartment between the S and I compartments. The number of animals in the E state is W, and the rate at which animals leave the E state is sigma W. 
+
+- adapt the code below to create an seir model 
+```{r echo = TRUE}
+
+##########################################################################
+
+#Ordinary differential Equations
+sir <- function(Time, State, Pars){
+ with(as.list(c(State,Pars)),{
+  dX <- -1 * beta * X * Y / sum(State)
+  dY <- beta * X * Y / sum(State)  - gamma * Y
+  dZ <- gamma * Y
+  return(list(c(dX,dY,dZ)))
+ })
+}
+
+
+#Parameters
+pars <- c(beta = 0.6, #beta = transmission rate
+          gamma = 0.2 #gamma = recovery rate
+          )
+#initial values
+N0 = 30000 #population size
+Y0 = 1 #initial fraction infected 
+Z0 = 0# initial fraction recovered, 
+X0 = N0 - Y0 - Z0
+init <- c(X = X0,Y = Y0,Z = Z0)
+
+
+```
+
+
+(f) Repeat (a) for this model. 
+
+(g) Repeat (c) for the SEIR model, where you also adjust the mean latent period. How do final size and outbreak duration depend on the latent period?
+
+
+
+
+## 2. Birth/immigration and death/emigration (deterministic)
+
+In the SIR model of the previous exercise, the assumption was made that the population is closed, which means that no new individuals arrive due to birth or immigration and no individuals leave due to death or emigration. This model is realistic as long as the time scale of the epidemic is much faster than the time scale of the demography, e.g. with infections like influenza and common cold. With more slowly developing infections like bovine tuberculosis, however, demography should be included into the model for a more relevant description of the disease dynamics. 
+Now we will make a new SIR model with replacement of the host population. Newborn and immigrated individuals are all susceptible, whereas death or emigration takes place independent of the infection status. 
+
+
+
+The rates at which individuals leave the S, I, and R states by death/emigration are mu X,  my Y, and  mu Z, respectively. Birth takes place at rate B. 
+  
+
+For simplicity we will assume that the population size remains constant, so that each death/emigration event is coupled to a birth/immigration event. That means that B = mu N.
+
+
+```{r echo = TRUE}
+########################################################################
+
+#Ordinary differential Equations
+sir <- function(Time, State, Pars){
+ with(as.list(c(State,Pars)),{
+  dX <- -1 * beta * X * Y /sum(State) +mu *Y + mu * Z
+  dY <- beta * X * Y / sum(State)  - gamma * Y - mu * Y
+  dZ <- gamma * Y - mu * Z
+  return(list(c(dX,dY,dZ)))
+ })
+}
+
+
+#Parameters
+pars <- c(beta = 0.6, #beta = transmission rate
+          gamma = 0.3, #gamma = recovery rate
+          mu = 0.05#mu = mortality rate
+          )
+#initial values
+N0 = 30000 #population size
+Y0 = 1 #initial fraction infected 
+Z0 = 0# initial fraction recovered, 
+X0 = N0 - Y0 - Z0
+init <- c(X = X0,Y = Y0,Z = Z0)
+
+#Data storage time
+dt = 0.5#timestep for storing data
+sim_duration  = 150 #length of the simulation
+times <- seq(0, sim_duration, by = dt)
+
+#Solve the ordinary differential equations
+ode.out <- ode(init, times, sir,pars) 
+#plot X, Y, and Z against time
+plot(x = ode.out[,1], y = ode.out[,2], type = "l", xlab = "time", ylab = "Count", col = "purple",lwd =2,ylim=c(0,N0))
+lines(x = ode.out[,1], y = ode.out[,3], type = "l", xlab = "time", ylab = "Count", col = "red",lwd =2)
+lines(x = ode.out[,1], y = ode.out[,4], type = "l", xlab = "time", ylab = "Count", col = "palegreen1",lwd =2)
+legend(x = 200, y = 27000., c("X","Y","Z"),lwd =2, col = c("purple", "red", "palegreen1"))
+```
+
+(a) Study the dYnamics of X, Y, and Z in time. How does the infection develop in time (extinction ?, equilibrium ? etc). What is the main difference between the SIR model without demography (exercise 1) and the SIR model with demography?
+
+- Make a graph of Y against X (as in exercise 1b).
+
+```{r}
+#plot  X against Y
+plot(x = ode.out[,2], y = ode.out[,3], type = "l", xlab ="X", ylab ="Y")
+
+
+
+```
+
+
+
+(b) Change the parameter values for beta, gamma, and mu in your model, calculate R0  and find the stead ystate number of susceptibles X from the simulation. How does the steady state X depend on R0?  How does the oscillatory behaviour depend on R0, gamma, and mu? 
+
+## ADDITIONAL ADVANCED QUESTIONS
+Suppose a veterinary epidemiologist is interested in reducing the prevalence of an infection in chickens by changing their life span. The research question is: how does host life span affect prevalence of infection? In order to see what the effect will be, he uses our model. He is not interested in short-term dynamics, but only what will happen in the long run. The focus is therefore on the steady state: when the prevalence has reached an equilibrium. 
+
+(d) Study the effect of changing the life span on the prevalence of an infection in the steady state. Interpret the results. Is a shorter or longer life span effective in reducing prevalence?
+She presents the results to a colleague epidemiologist, who does not understand part of the results. She reasons: “if the life span becomes very short, you would expect that more chickens die (are removed from the farm) before being infected, and that if it is infected, it cannot effectively transmit the infection itself. However, in the results I see a high prevalence with short life span.”
+
+(e) Explain why the model does not show the expected effect of a short life span? 
+Now there are two possibilities: either the explanation gives us a better understanding and new insight into the effect of life span, or the explanation shows us that the model is incorrectly formulated to answer the research question. The two epidemiologists agree that there must be something wrong in the model. 
+
+(f) How should the model be adjusted to provide an answer to the research question?
+
+(g) Make the adjustment and answer the research question with the new model. Is a shorter or a longer life span effective in reducing prevalence?
