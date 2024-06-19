@@ -1,17 +1,9 @@
-# My Project
+# Mathematical Modelling of Infectious Diseases 
 
-This project template is a demonstration for the RepCo workshop.
+R-codes for practicals of the course Mathematical Modelling of Infectious Diseases.
 
-## Usage
-
-Click "Use this template" at the top of this page to create a new repository with the same folder structure.
 
 ## Project Structure
-
-The project structure distinguishes three kinds of folders:
-- read-only (RO): not edited by either code or researcher
-- human-writeable (HW): edited by the researcher only.
-- project-generated (PG): folders generated when running the code; these folders can be deleted or emptied and will be completely reconstituted as the project is run.
 
 
 ```
@@ -21,17 +13,8 @@ The project structure distinguishes three kinds of folders:
 ├── LICENSE
 ├── README.md
 ├── requirements.txt
-├── data               <- All project data, ignored by git
-│   ├── processed      <- The final, canonical data sets for modeling. (PG)
-│   ├── raw            <- The original, immutable data dump. (RO)
-│   └── temp           <- Intermediate data that has been transformed. (PG)
-├── docs               <- Documentation notebook for users (HW)
-│   ├── manuscript     <- Manuscript source, e.g., LaTeX, Markdown, etc. (HW)
-│   └── reports        <- Other project reports and notebooks (e.g. Jupyter, .Rmd) (HW)
-├── results
-│   ├── figures        <- Figures for the manuscript or reports (PG)
-│   └── output         <- Other output for the manuscript or reports (PG)
-└── R                  <- Source code for this project (HW)
+├── docs               <- Word documents or PDFs of the practicals and answer keys.
+└── R                  <- Source code for this project including R markdown
 
 ```
 
