@@ -1,8 +1,13 @@
 ---
-title: "Computer Practical ‘Stochastic models of infectious disease dynamics in small
-populations’"
-output: html_notebook
+title: Computer Practical ‘Stochastic models of infectious disease dynamics in small
+  populations’
+output:
+  html_notebook: default
 ---
+```{r echo = FALSE}
+#prevent text outside margins in pdf
+options(width = 60)
+```
 # 0. Introduction
 
 In a stochastic model the number of individuals in each event (like infection or recovery)
@@ -11,16 +16,16 @@ with the model yields one particular outbreak in a population, and the model nee
 many times to get information on averages, or on variation between runs.
 To simulate the number of infection events, we use the probability for each susceptible to
 make at least one contact with an infectious individual in each time step. For each susceptible,
-the mean number of contacts with infectious individuals is equal to (β Y/N) * ∆t. By assuming
+the mean number of contacts with infectious individuals is equal to $(\beta Y/N) * \Delta t$. By assuming
 that contacts occur by a Poisson point process (i.e. “random”), this means that the probability
-that no contacts are made is equal to exp(-(β Y/N) * ∆t). Then, in each time step, the number
+that no contacts are made is equal to exp( $(-\beta Y/N) * \Delta t$). Then, in each time step, the number
 of new infections is binomially distributed as:
 
-new infections $~ bin(n = X, p = 1 – exp(-(β Y/N) * ∆t))$
+new infections $~ bin(n = X, p = 1 – exp(- (\beta Y/N) * \Delta t))$
 
 Similarly, the number of new recoveries is binomially distributed as:
 
-new recoveries $~ bin(n = Y, p = 1 – exp(-γ * ∆t))$
+new recoveries $~ bin(n = Y, p = 1 – exp(-\gamma * \Delta t))$
 
 # 1. Stochastic SIR model.
 ```{r}
@@ -91,7 +96,7 @@ legend(40,60,c("X","Y","Z"),col = c("green","firebrick3", "black"),lwd = 2,seg.l
 
 plot(sim$X, sim$Y, type = "l", xlab = "X", ylab = "Y")
 s <- seq(length(sim$X)-1)
-arrows(x0 = sim$X[s], y0 = sim$Y[s], x1 = sim$X[s + 1], y1 = sim$Y[s + 1],length = .075)
+suppressWarnings(arrows(x0 = sim$X[s], y0 = sim$Y[s], x1 = sim$X[s + 1], y1 = sim$Y[s + 1],length = .075)) #In the stochastic simulation sometimes no differences occur a warning can occur for zero-length arrow. This warning is suppressed.
 
 ```
 (b) Click Run the simulation a couple of times. Describe the differences between the different runs. How long do the outbreaks take? What is the peak number of infected people? How many are still
@@ -117,7 +122,14 @@ sir.sim.multiple <- function(n0, i0, r0, beta, gamma, deltat, duration, repeats)
 }
 ```
 
-Plot a histogram of the final size of the simulations by selecting the number of recovered individuals for Y  = 0.
+- Run the model multiple times:
+
+```{r}
+repeats <- 100
+multi.sim <- sir.sim.multiple(n0, Y0, Z0, beta, gamma, deltat, duration, repeats)
+```
+
+- Plot a histogram of the final size of the simulations by selecting the number of recovered individuals for Y  = 0.
 
 ```{r}
 ##plot the end of the epidemic in a histogram
@@ -126,7 +138,7 @@ hist(multi.sim$Z[floor(multi.sim$Time) == simlength],breaks = n0, xlim = c(0-1,n
 
 (c) What do you see? Calculate the mean final size. Why is the mean result of 100 runs with the stochastic model not equal to the result of the deterministic model? Estimate the probability of a major outbreak from the 100 model  runs.
 
-(d) Change the population size in BM to N = 100, and repeat the analyses of the final sizes. Does the probability of a major outbreak change if the population size is smaller? Now change R0 and repeat it again. How does that affect the final size distribution?
+(d) Change the population size to N = 100, and repeat the analyses of the final sizes. Does the probability of a major outbreak change if the population size is smaller? Now change R0 and repeat it again. How does that affect the final size distribution?
 
 # 4. Stochastic model with birth/immigration and death/emigration
 Add birth and death to the model by changing this code. Also add three extra variable DX, DY and DZ to count the number of dead susceptibles, infected and recovered individuals. To keep the population constant the number of births should equal DX + DY +DZ.
@@ -199,15 +211,13 @@ sir.sim.demo.multiple <- function(n0, i0, r0, beta, gamma,mu, deltat, duration, 
 }
 ##plot the end of the epidemic (Y == 0)
 select<- function(r){
-  last = multi.sim$Time[multi.sim$sim==r & multi.sim$Y ==0]
-  last = min(last)
-  if(last == Inf){
-  return(simlength+1)} 
-  return(last)
-
+  #no extinction
+  if(length(multi.sim$Time[multi.sim$sim==r & multi.sim$Y ==0])==0) return(simlength+1) 
+  return(min(multi.sim$Time[multi.sim$sim==r & multi.sim$Y ==0]))
+  
   }
 extinctiontime= sapply(FUN = select, c(1:repeats)) 
-extinctiontime
+
 hist(extinctiontime)
 
 ```
@@ -217,6 +227,7 @@ outbreak got extinct.
 (f) Repeat (c) and (d) with simulations starting in the endemic steady state. Describe the
 differences in extinction behaviour between the two initial condition. How do explain the
 differences?
+
 # ADDITIONAL QUESTIONS
 (g) Make the population size smaller (e.g. N = 20) and larger (e.g. N = 1000) and repeat (c)
 and (d) for the endemic equilibrium as starting condition. How do the results differ? How do
