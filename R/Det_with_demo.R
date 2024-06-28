@@ -39,7 +39,7 @@ lines(x = ode.out[,1], y = ode.out[,3], type = "l", xlab = "time", ylab
       = "Count", col = "red",lwd =2)
 lines(x = ode.out[,1], y = ode.out[,4], type = "l", xlab = "time", ylab
       = "Count", col = "palegreen1",lwd =2)
-legend(x = 200, y = 27000., c("X","Y","Z"),lwd =2, col = c("purple",
+legend(x = 100, y = 27000., c("X","Y","Z"),lwd =2, col = c("purple",
                                                            "red", "palegreen1"))
 #plot X against Y
 plot(x = ode.out[,2], y = ode.out[,3], type = "l", xlab ="X", ylab ="Y")
