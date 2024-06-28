@@ -70,7 +70,7 @@ sir.sim <- function(N0, Y0, Z0, beta, gamma, deltat, duration){
 
 - Do you understand this code? 
 
-(a) Do one simulation`below. The code will produce 2 figures: epidemic curve and X vs Y:
+(a) Do one simulation below. The code will produce 2 figures: epidemic curve and X vs Y:
 ```{r}
 
 ####parameters#####
@@ -99,7 +99,7 @@ s <- seq(length(sim$X)-1)
 suppressWarnings(arrows(x0 = sim$X[s], y0 = sim$Y[s], x1 = sim$X[s + 1], y1 = sim$Y[s + 1],length = .075)) #In the stochastic simulation sometimes no differences occur a warning can occur for zero-length arrow. This warning is suppressed.
 
 ```
-(b) Click Run the simulation a couple of times. Describe the differences between the different runs. How long do the outbreaks take? What is the peak number of infected people? How many are still
+(b) Run the simulation a couple of times. Describe the differences between the different runs. How long do the outbreaks take? What is the peak number of infected people? How many are still
 susceptible at the end? How does this relate to what we saw in the deterministic model?
 
 Because in the stochastic model every simulation is different, there is variation in
@@ -136,7 +136,7 @@ multi.sim <- sir.sim.multiple(n0, Y0, Z0, beta, gamma, deltat, duration, repeats
 hist(multi.sim$Z[floor(multi.sim$Time) == simlength],breaks = n0, xlim = c(0-1,n0+1), xlab = "Final size", main = "Final size distribution",probability = TRUE, ylab = "frequency")
 ```
 
-(c) What do you see? Calculate the mean final size. Why is the mean result of 100 runs with the stochastic model not equal to the result of the deterministic model? Estimate the probability of a major outbreak from the 100 model  runs.
+(c) What do you see? Calculate the mean final size. Why is the mean result of 100 runs with the stochastic model not equal to the result of the deterministic model? Estimate the probability of a major outbreak from the 100 model runs.
 
 (d) Change the population size to N = 100, and repeat the analyses of the final sizes. Does the probability of a major outbreak change if the population size is smaller? Now change R0 and repeat it again. How does that affect the final size distribution?
 
@@ -189,7 +189,7 @@ conditions will be considered: (1) starting with a susceptible population and on
 individual, and (2) starting in the endemic steady state which will be determined from the
 deterministic model.
 
-(c) For the second initial condition we need the steady state of the deterministic model.Calculate values of the steady state of the deterministic model.
+(c) For the second initial condition we need the steady state of the deterministic model. Calculate values of the steady state of the deterministic model.
 
 We will compare the long-term dynamics by two output parameters: the number of outbreaks
 going extinct, and the distribution of extinction times over many simulations. Therefore, we
