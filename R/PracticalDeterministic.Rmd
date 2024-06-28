@@ -77,8 +77,8 @@ legend(x = 60, y = 15000, c("X","Y","Z"),lwd =2, col = c("purple", "red", "paleg
 
 A small explanation:
 - the function sir is defined, which contains the model equations. If you want to simulate a different model, you should define each differential equation in a separate line, and end with the list containing all equation names. 
-- the vector pars is defined, which contains the transmission rate parameter (beta), the recovery rate  (gamma),
-- the vector  init contains the initial number of infecteds Y0, the initial number of recovereds Z0, the initial number of susceptibles Y0 population size (30 000) minus the infecteds and recoverds.
+- the vector pars is defined, which contains the transmission rate parameter (beta) and the recovery rate  (gamma)
+- the vector  init contains the initial number of infecteds Y0, the initial number of recovereds Z0 and the initial number of susceptibles X0 which is the population size (30 000) minus the infecteds and recoverds.
 - the vector times gives the times to store the time points of the simulation with time steps of the simulation dt and simulation length sim_duration.
 
 In object ode.out we store the simulation result. These can be plotted as count-versus time or by plotting a trajectory in the phase plane of X and Y. 
@@ -89,7 +89,7 @@ Run the  model with the default values.
 - How long does the outbreak take? 
 - What is the peak number of infected people? 
 - How many people are still susceptible at the end of the outbreak? 
-Change the values for beta and gamma and see how the outbreak dYnamics changes.
+Change the values for beta and gamma and see how the outbreak dynamics changes.
 
 If you enter the following code after you ran a simulation and press enter, you can see how the simulation is stored in a table. This makes it possible to see exactly how many individuals are still susceptible at the end of the outbreak. 
 ```{r echo = TRUE}
@@ -114,7 +114,7 @@ plot(x = ode.out[,2], y = ode.out[,3], type = "l", xlab ="X", ylab ="Y")
 
 In the lectures we have learnt that the basic reproduction ratio R0 is an important parameter in infectious disease epidemiology: it is the mean number of new secondary cases caused by a single primary case in a susceptible population. Another important parameter is the duration of the infectious period D. In the SIR-model, R0 = beta/gamma, and D = 1/gamma. 
 
-(c) Simulate outbreaks with several combinations of beta and gamma resulting in R0 = 3, and with several combinations resulting in R0 = 1.5, or R0 = 5 (or other values of R0 as you like). Look at the plots, but also directly at the output table. How does the disease dYnamics (final size, duration of the outbreak) depend on the values of R0? How do the disease dYnamics depend on the duration of the infectious period D? 
+(c) Simulate outbreaks with several combinations of beta and gamma resulting in R0 = 3, and with several combinations resulting in R0 = 1.5, or R0 = 5 (or other values of R0 as you like). Look at the plots, but also directly at the output table. How does the disease dynamics (final size, duration of the outbreak) depend on the values of R0? How do the disease dynamics depend on the duration of the infectious period D? 
 
 Now we will create a plot for R0 and the final size. To this end we will use the function runsteady of the package rootSolve. 
 
@@ -124,22 +124,22 @@ Now we will create a plot for R0 and the final size. To this end we will use the
 finalsize <- NULL
 for(R0 in seq(0,2,0.05)){
   #add the outcomes to the results
-finalsize <- rbind(finalsize, 
-data.frame(R0= R0, #R0 value	                      
-#final size at equilibrium (Y ==0)
-finalsize = runsteady(y = init, func = sir, 
-parms = c(beta = R0, gamma = 1))$y["Z"])) 
+  finalsize <- rbind(finalsize, 
+                     data.frame(R0= R0, #R0 value
+                                #final size at equilibrium (Y ==0)
+                                finalsize = runsteady(y = init, func = sir, 
+                                parms = c(beta = R0, gamma = 1))$y["Z"])) 
 }
 plot(finalsize$R0,finalsize$finalsize, type ="l")
 ```
 
-(d) Create a plot for R0 and the final size. StudY the effect of the initial number of infected individuals “Y” on the final size. 
+(d) Create a plot for R0 and the final size. Study the effect of the initial number of infected individuals “Y” on the final size. 
 Why is taking x0 – X a better expression for the final size? 
 
 (e) Change the initial conditions to Y0 = 1 and Z0 = 70000 (with beta = 0.6 and gamma = 0.2). What is the final size of the outbreak, ie how many animals got infected? Try more initial conditions, and more combinations of beta and gamma. What is the relation between R0, initial condition, and final size?
 
 
-Now make the assumption that after infection, people first become latently infected (Exposed), before becoming Infectious. In the model, we add an extra E compartment between the S and I compartments. The number of animals in the E state is W, and the rate at which animals leave the E state is sigma W. 
+Now make the assumption that after infection, people first become latently infected (Exposed), before becoming Infectious. In the model, we add an extra E compartment between the S and I compartments. The number of animals in the E state is W, and the rate at which animals leave the E state is sigma * W. 
 
 - adapt the code below to create an seir model 
 ```{r echo = TRUE}
@@ -186,7 +186,7 @@ Now we will make a new SIR model with replacement of the host population. Newbor
 
 
 
-The rates at which individuals leave the S, I, and R states by death/emigration are mu X,  my Y, and  mu Z, respectively. Birth takes place at rate B. 
+The rates at which individuals leave the S, I, and R states by death/emigration are mu X,  mu Y, and  mu Z, respectively. Birth takes place at rate B. 
   
 
 For simplicity we will assume that the population size remains constant, so that each death/emigration event is coupled to a birth/immigration event. That means that B = mu N.
@@ -229,7 +229,7 @@ ode.out <- ode(init, times, sir,pars)
 plot(x = ode.out[,1], y = ode.out[,2], type = "l", xlab = "time", ylab = "Count", col = "purple",lwd =2,ylim=c(0,N0))
 lines(x = ode.out[,1], y = ode.out[,3], type = "l", xlab = "time", ylab = "Count", col = "red",lwd =2)
 lines(x = ode.out[,1], y = ode.out[,4], type = "l", xlab = "time", ylab = "Count", col = "palegreen1",lwd =2)
-legend(x = 200, y = 27000., c("X","Y","Z"),lwd =2, col = c("purple", "red", "palegreen1"))
+legend(x = 100, y = 27000., c("X","Y","Z"),lwd =2, col = c("purple", "red", "palegreen1"))
 ```
 
 (a) Study the dYnamics of X, Y, and Z in time. How does the infection develop in time (extinction ?, equilibrium ? etc). What is the main difference between the SIR model without demography (exercise 1) and the SIR model with demography?
