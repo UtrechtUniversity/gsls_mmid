@@ -69,7 +69,7 @@ times <- seq(0, sim_duration, by = dt)
 ode.out <- ode(init, times, sir, pars) 
 
 #plot X, Y, and Z against time
-plot(x = ode.out[,1], y = ode.out[,2], type = "l", xlab = "time", ylab = "animals", col = "purple",lwd =2)
+plot(x = ode.out[,1], y = ode.out[,2], type = "l", xlab = "time", ylab = "animals", col = "purple",lwd =2, ylim = c(0,N0))
 lines(x = ode.out[,1], y = ode.out[,3], type = "l", xlab = "time", ylab = "animals", col = "red",lwd =2)
 lines(x = ode.out[,1], y = ode.out[,4], type = "l", xlab = "time", ylab = "animals", col = "palegreen1",lwd =2)
 legend(x = 60, y = 15000, c("X","Y","Z"),lwd =2, col = c("purple", "red", "palegreen1"))
