@@ -12,7 +12,6 @@ R-codes for practicals of the course Mathematical Modelling of Infectious Diseas
 ├── CITATION.cff
 ├── LICENSE
 ├── README.md
-├── requirements.txt
 ├── docs               <- Word documents or PDFs of the practicals and answer keys.
 └── R                  <- Source code for this project including R markdown
 
