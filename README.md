@@ -43,7 +43,7 @@ or
 ```
 
 ## Add a citation file
-Cite [here](/CITATION)
+Cite [here](/CITATION.cff)
 
 ## License
 
