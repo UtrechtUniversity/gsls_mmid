@@ -1,0 +1,566 @@
+---
+title: Computer Practical ‘R0 estimation’
+output:
+  html_notebook: default
+  runtime: shiny
+---
+```{r echo = FALSE}
+#prevent text outside margins in pdf
+options(width = 60)
+
+# Load required libraries
+library(graphics)  
+library(bbmle)  
+library(ggplot2)
+
+```
+
+# Practical Estimation of R₀ from various sources of information
+This practical guide demonstrates three methods to estimate the basic reproduction number (R₀) from field data:
+
+1. From the exponential growth phase of an epidemic
+2. From the final size of an epidemic
+3. From the endemic steady state
+
+**Before starting:** Download the zip-file "EstimationROFieldData.zip" from the course website and unzip it at a convenient location. Ensure the CSV files (SARS.csv, RacingHorses.csv, Salmonella.csv) are in your working directory.
+
+```{r}
+# Set your working directory to the location of the CSV files
+data_path <- "../data/"
+
+
+```
+
+---
+
+# 1. Estimation of R₀ from the exponential growth phase
+
+## Theory
+
+When an epidemic is in its initial phase, both prevalence and incidence increase exponentially. During this exponential growth phase, the proportion of susceptibles in the population remains approximately constant ($X \approx N \Leftrightarrow x \approx 1$), allowing us to estimate the exponential growth rate $r$ from incidence data and then use it to estimate R₀.
+
+The relationship between $r$ and R₀ requires the **mean generation time** $T_g$ (the mean time at which an infected person infects new cases, measured from their own infection time). In the basic SIR model, $T_g = 1/\gamma$ where $\gamma$ is the recovery rate.
+
+From the SIR model equations:
+
+$$R_0 = \dfrac{\beta}{\gamma}   $$
+Assuming that $S_t \approx N_t $ in this phase of the epidemic:
+
+$$ r = \beta - \gamma \Rightarrow \beta = \gamma + r  $$
+
+Thus
+
+$$ R_0 = 1 + \dfrac{r}{\gamma} = 1 + r T_g$$
+
+## The dataset
+
+The dataset is derived from the Hong Kong SARS epidemic (with random alterations). It contains daily incidence for 55 days of cases not linked to particular clusters, allowing assumption of random mixing.
+
+### Questions
+
+(a) **How many cases were infected in the first, second, and third week of the epidemic?**  
+(b) **What is the observed incidence on day 2?**
+
+```{r}
+# Import SARS data
+sars <- read.csv(paste0(data_path,"SARS.csv"), header = TRUE, sep = ",")[, 1:2]
+
+# View first few rows
+head(sars)
+
+# Count cases by week
+week1 <- sum(sars$Incidence[sars$Time <= 7])
+week2 <- sum(sars$Incidence[sars$Time > 7 & sars$Time <= 14])
+week3 <- sum(sars$Incidence[sars$Time > 14 & sars$Time <= 21])
+
+cat("Cases in Week 1 (days 1-7):", week1, "\n")
+cat("Cases in Week 2 (days 8-14):", week2, "\n")
+cat("Cases in Week 3 (days 15-21):", week3, "\n")
+cat("Incidence on day 2:", sars$Incidence[sars$Time == 2], "\n")
+```
+
+## Visual exploration
+
+```{r}
+# Plot raw incidence data
+ggplot(data = sars, aes(x = Time, y = Incidence)) +
+  geom_point() +
+  geom_line() +
+  xlab("Time (days)") +
+  ylab("Incidence (new cases)") +
+  ggtitle("SARS Epidemic - Daily Incidence")
+```
+
+(c) **By visual inspection of the plotted graph, when would you think the exponential growth phase ends?**
+
+Log-transforming the y-values makes it easier to identify the exponential phase, as an exponential curve $e^{rt}$ becomes linear when plotted on a logarithmic scale (since $\log(e^{rt}) = rt$).
+
+```{r}
+# Plot log-transformed incidence
+sars.plot <- ggplot() +
+  geom_point(data = sars, aes(x = Time, y = log(Incidence))) +
+  xlab("Time") +
+  ylab("log(Cases)") +
+  ggtitle("SARS Epidemic - Log Incidence")
+
+sars.plot
+```
+
+(d) **By visual inspection of the log plot, when does the exponential growth phase end?**
+
+```{r}
+# Set the end of exponential phase (change this value based on your inspection)
+end.exp.phase <- 30  # Default value - adjust as needed
+cat("End of exponential phase set to day:", end.exp.phase, "\n")
+```
+
+## Maximum Likelihood Estimation
+
+We model the incidence as $i(t) = i(0)e^{rt}$ and assume the observed incidences follow a Poisson distribution with mean $i(t)$. The log-likelihood function is:
+
+$$\text{log-likelihood} = \sum \log\left(\frac{e^{-i(t)} i(t)^{c(t)}}{c(t)!}\right)$$
+
+```{r}
+# Log-likelihood function for the selected data
+# We use suppressWarnings to avoid warnings when the algorithm tries values outside possible range
+# The function assumes:
+# 1. Poisson distributed counts around an expected value
+# 2. An exponential growth of the number of cases
+
+dLL <- function(y0, r, log = TRUE) {
+  -sum(suppressWarnings(log(dpois(x = sars$Incidence[sars$Time <= end.exp.phase],
+                                  lambda = y0 * exp(r * sars$Time[sars$Time <= end.exp.phase]),
+                                  log = FALSE))))
+}
+
+# Fit the model using maximum likelihood
+fit <- mle2(minuslogl = dLL, start = list(y0 = 1, r = 0.1))
+fit
+```
+
+(e) **What is the value of the log-likelihood? What is the estimated $r$?**
+
+We can also use a generalized linear model with Poisson family:
+
+```{r}
+# GLM approach - the formula is ln(y) ~ ln(y0) + r*t
+fit.glm <- glm(formula = Incidence ~ Time, 
+               data = sars[sars$Time <= end.exp.phase, ],
+               family = "poisson")
+
+# Extract coefficients
+# In the GLM: ln(y) ~ ln(y0) + r*t, so:
+# coef[1] = ln(y0), coef[2] = r
+y0.est <- exp(coef(fit.glm)[1])
+r.est <- coef(fit.glm)[2]
+
+cat("GLM Estimates:\n")
+cat("y0 (initial incidence):", y0.est, "\n")
+cat("r (exponential growth rate):", r.est, "\n")
+```
+
+## Model fitting visualization
+
+```{r}
+# Add fitted model for exponential phase
+sars.plot +
+  geom_line(data = data.frame(Time = seq(1, end.exp.phase, 1),
+                               Incidence = sapply(X = seq(1, end.exp.phase, 1), 
+                                                  function(t){log(y0.est * exp(r.est * t))})),
+            aes(Time, Incidence),
+            linetype = 1, linewidth = 2, colour = "red")
+```
+
+Now add extrapolation after the exponential phase:
+
+```{r}
+sars.plot +
+  geom_line(data = data.frame(Time = seq(1, end.exp.phase, 1),
+                               Incidence = sapply(X = seq(1, end.exp.phase, 1),
+                                                  function(t){log(y0.est * exp(r.est * t))})),
+            aes(Time, Incidence),
+            linetype = 1, linewidth = 2, colour = "red") +
+  geom_line(data = data.frame(Time = seq(end.exp.phase, 55, 1),
+                               Incidence = sapply(X = seq(end.exp.phase, 55, 1),
+                                                  function(t){log(y0.est * exp(r.est * t))})),
+            aes(Time, Incidence),
+            linetype = 1, linewidth = 2, colour = "pink")
+```
+
+(f) **Was the selected end of the exponential phase chosen correctly?**
+
+## Estimating R₀
+
+The mean generation time $T_g$ for SARS is estimated to be in the range of 10-16 days. Using the relationship $R_0 = 1 + r T_g$:
+
+```{r}
+# Literature values for generation time
+Tg <- 16  # Can be adjusted between 10-16
+
+# Calculate R0
+R0_estimate <- 1 + r.est * Tg
+
+cat("With Tg =", Tg, "days:\n")
+cat("R0 estimate:", R0_estimate, "\n\n")
+
+# Range for different Tg values
+Tg_range <- seq(10, 16, by = 1)
+R0_range <- 1 + r.est * Tg_range
+
+cat("R0 range for Tg = 10 to 16 days:\n")
+for(i in 1:length(Tg_range)) {
+  cat("Tg =", Tg_range[i], "days: R0 =", R0_range[i], "\n")
+}
+```
+
+(g) **What is the range of R₀ values for the possible generation times (10-16 days)?**
+
+---
+
+# 2. Estimation of R₀ from the final size of an epidemic
+
+## Theory
+
+The **final size** of an epidemic is the fraction of the population that has experienced infection by the end of the epidemic. The final size is directly related to the transmission potential and R₀.
+
+In a homogeneously mixing population, the **final size equation** is:
+
+$$1 - z(\infty) = \exp(-z(\infty) R_0)$$
+
+where $z(\infty)$ is the final size (proportion of population infected).
+
+From this equation, we can derive the estimator for R₀:
+
+$$R_0 = \frac{-\log(1 - z(\infty))}{z(\infty)}$$
+
+This estimator is general for homogeneously mixing populations and is **independent of the distribution of the generation time**, unlike the estimation from exponential growth.
+
+## The dataset
+
+This dataset is derived from an epidemic of influenza A virus (H3N8) among racehorses in Japan, 1971. It contains the population size of five race courses and the number of horses that got infected during the outbreak.
+
+```{r}
+# Load racing horses data
+race <- read.csv(paste0(data_path,"RacingHorses.csv"), header = TRUE, sep = ",")
+
+# View the data
+race
+```
+
+### Questions
+
+(a) **What was the final size of the outbreak in Niigata?**
+
+```{r}
+# Calculate final size for each race course
+race$FS <- race$Infected / race$Population
+
+# Final size in Niigata
+niigata_fs <- race$FS[race$Race.course == "Niigata"]
+cat("Final size in Niigata:", niigata_fs, "\n")
+
+# Show all final sizes
+race[, c("Race.course", "Infected", "Population", "FS")]
+```
+
+## Visualizing final sizes
+
+```{r}
+# Basic plot of final sizes
+ggplot() +
+  geom_point(aes(y = (race$Infected/race$Population), x = factor(race$Race.course))) +
+  xlab("Race course") +
+  ylab("Final Size") +
+  ylim(c(0.6, 1)) +
+  ggtitle("Final Size by Race Course")
+```
+
+## Confidence intervals
+
+We calculate confidence intervals using the normal approximation to the binomial distribution. The standard error for a proportion is:
+
+$$SE = \sqrt{\frac{p(1-p)}{n}}$$  
+
+(b) **How do you calculate the standard error for a proportion?**
+
+```{r}
+# Calculate standard deviation of the final size
+race$sdFS <- sqrt(race$FS * (1 - race$FS) / race$Population)
+
+# Show standard errors
+race[, c("Race.course", "FS", "sdFS")]
+```
+
+Now plot the final sizes with 95% confidence intervals:
+
+```{r}
+# Plot final sizes with confidence intervals
+ggplot(race) +
+  geom_point(aes(x = Race.course, y = FS)) +
+  geom_errorbar(aes(x = Race.course, ymin = FS - 1.96 * sdFS, ymax = FS + 1.96 * sdFS),
+                width = 0.2) +
+  xlab("Race course") +
+  ylab("Final Size") +
+  ylim(c(0, 1)) +
+  ggtitle("Final Size with 95% Confidence Intervals")
+```
+
+## Estimating R₀ from final size
+
+```{r}
+# Calculate R0 and confidence intervals
+race$R0 <- -log(1 - race$FS) / race$FS
+
+# Confidence intervals for R0
+# Upper limit: corresponds to smallest fraction susceptibles
+race$R0.ul <- -log(1 - race$FS - 1.96 * race$sdFS) / (race$FS - 1.96 * race$sdFS)
+
+# Lower limit: corresponds to largest fraction susceptibles
+race$R0.ll <- -log(1 - race$FS + 1.96 * race$sdFS) / (race$FS + 1.96 * race$sdFS)
+
+# Show results
+race[, c("Race.course", "FS", "R0", "R0.ll", "R0.ul")]
+```
+
+(c) **Which race course had the highest R₀? Which race courses have significantly different R₀ values, based on the confidence intervals?**
+
+```{r}
+# Plot R0 estimates
+ggplot(race) +
+  geom_point(aes(x = Race.course, y = R0)) +
+  geom_errorbar(aes(x = Race.course, ymin = R0.ll, ymax = R0.ul),
+                width = 0.2) +
+  xlab("Race course") +
+  ylab("R0") +
+  ylim(c(0, 5)) +
+  ggtitle("R0 Estimates from Final Size with 95% CI")
+```
+
+---
+
+# 3. Estimation of R₀ from the endemic steady state
+
+## Theory
+
+When an infection is **endemic** in a population, the proportions of susceptible, infected, and recovered animals remain approximately constant over time.
+
+### Basic SIR model with demography
+
+In the basic SIR model with birth and mortality:
+
+$$\begin{array}{l}  
+\frac{dx}{dt} = \mu - \beta xy - \mu x   
+\frac{dy}{dt} = \beta xy - \gamma y - \mu y   
+\frac{dz}{dt} = \gamma y - \mu z  
+\end{array}$$
+
+The steady state proportion of immunes is:
+
+$$z^* = \frac{\gamma}{\mu + \gamma} \left(1 - \frac{1}{R_0}\right)$$
+
+If we observe $z^*$ (the seroprevalence), we can estimate R₀ as:
+
+$$R_0 = \frac{1}{1 - z^* \frac{\mu + \gamma}{\gamma}}$$  
+
+For many infectious diseases with life-long immunity, $\gamma \gg \mu$, so $(\mu + \gamma)/\gamma \approx 1$ and $R_0 \approx 1/(1 - z^*)$.
+
+### SIS-like model for Salmonella Dublin
+
+For Salmonella Dublin in dairy cows, we use a more complex model because cows lose immunity relatively quickly. We include a latent period and neglect mortality (since infection and loss of immunity occur much faster than birth and death):
+
+$$\begin{array}{l}  
+\frac{dx}{dt} = \eta z - \beta x y   \\
+\frac{dw}{dt} = \beta x y - \sigma w   \\
+\frac{dy}{dt} = \sigma w - \gamma y   \\
+\frac{dz}{dt} = \gamma y - \eta z  \\
+\end{array}$$
+
+Where:
+
+- $x$ = susceptible
+- $w$ = latent (exposed but not yet infectious)
+- $y$ = infectious
+- $z$ = immune (seropositive)
+
+The steady state proportion of immune individuals is:
+
+$$z^* = \left(1 - \frac{1}{R_0}\right) \frac{\gamma \sigma}{\gamma \sigma + \eta \sigma + \eta \gamma} = \left(1 - \frac{1}{R_0}\right) \frac{D_S}{D_S + L + D}$$
+
+Where:
+
+- $R_0 = \beta / \gamma$
+- $D_S$ = mean duration of seropositivity = $1/\eta$
+- $L$ = mean latent period = $1/\sigma$
+- $D$ = mean infectious period = $1/\gamma$
+
+(a) **How would you express $D_S$, $L$, and $D$ in terms of the model parameters $\beta$, $\sigma$, $\gamma$, and $\eta$?**
+
+From the steady state seroprevalence, we can derive:
+
+$$R_0 = \frac{1}{1 - z^* \left(1 + \frac{L + D}{D_S}\right)}$$  
+
+## The dataset
+
+This dataset contains seroprevalence data of Salmonella Dublin from two Dutch dairy herds (Van Schaik et al. 2007; Vet Res 38, pp 861-9). For each sampling day, the number of cows and the number of seropositive cows are recorded.
+
+```{r}
+# Load Salmonella data
+salmo <- read.csv(paste0(data_path,"Salmonella.csv"), header = TRUE, sep = ",")
+
+# View first few rows
+head(salmo)
+```
+
+### Questions
+
+(b) **What are the final seroprevalences in both herds, and what were the time intervals between the first sample and these observations?**
+
+```{r}
+# Summary of the data
+summary(salmo)
+
+# Final observations for each herd
+final_herd1 <- salmo[salmo$Herd == 1 & salmo$Day == max(salmo$Day[salmo$Herd == 1]), ]
+final_herd2 <- salmo[salmo$Herd == 2 & salmo$Day == max(salmo$Day[salmo$Herd == 2]), ]
+
+cat("Herd 1 - Final observation:\n")
+print(final_herd1)
+cat("\nHerd 2 - Final observation:\n")
+print(final_herd2)
+```
+
+## Visualizing seroprevalence over time
+
+```{r}
+# Plot seroprevalence over time for both herds
+salmo.plot <- ggplot() +
+  geom_path(data = salmo, aes(x = Day, y = Seropositive/Herd.size, colour = factor(Herd))) +
+  geom_point(data = salmo, aes(x = Day, y = Seropositive/Herd.size, colour = factor(Herd))) +
+  scale_colour_manual(name = "Herd", values = c("red", "blue")) +
+  xlab("Day (since first sample)") +
+  ylab("Seroprevalence") +
+  ggtitle("Salmonella Dublin Seroprevalence in Two Dairy Herds")
+
+salmo.plot
+```
+
+(c) **By visual inspection, when does the endemic steady state start for the two herds?**
+
+## Estimating endemic equilibrium
+
+```{r}
+# Set the beginning of the endemic equilibrium for each herd
+# Adjust these values based on your visual inspection
+start.end.eq.herd1 <- 13
+start.end.eq.herd2 <- 50
+
+cat("Endemic equilibrium starts at:\n")
+cat("Herd 1: Day", start.end.eq.herd1, "\n")
+cat("Herd 2: Day", start.end.eq.herd2, "\n")
+
+# Estimate the endemic equilibrium (mean seroprevalence during steady state)
+end.eq.herd1 <- mean(salmo$Seropositive[salmo$Herd == 1 & salmo$Day >= start.end.eq.herd1] / 
+                    salmo$Herd.size[salmo$Herd == 1 & salmo$Day >= start.end.eq.herd1])
+
+end.eq.herd2 <- mean(salmo$Seropositive[salmo$Herd == 2 & salmo$Day >= start.end.eq.herd2] / 
+                    salmo$Herd.size[salmo$Herd == 2 & salmo$Day >= start.end.eq.herd2])
+
+cat("Endemic equilibrium seroprevalence:\n")
+cat("Herd 1:", end.eq.herd1, "\n")
+cat("Herd 2:", end.eq.herd2, "\n")
+```
+
+(d) **What were the seroprevalences in the endemic steady states for the two herds?**
+
+```{r}
+salmo.plot +
+  geom_line(aes(y = c(end.eq.herd1, end.eq.herd1), 
+                x = c(start.end.eq.herd1, max(salmo$Day[salmo$Herd == 1]) + 1)),
+            linetype = 2, colour = "red") +
+  geom_line(aes(y = c(end.eq.herd2, end.eq.herd2), 
+                x = c(start.end.eq.herd2, max(salmo$Day[salmo$Herd == 2]) + 1)),
+            linetype = 2, colour = "blue")
+```
+
+(e) **Do you still agree on the starting moment of the steady state?**
+
+## Estimating R₀ from endemic equilibrium
+
+From literature:
+
+- Latent period (L) ≈ 2 days
+- Infectious period (D) ≈ 10 days  
+- Duration of seropositivity (D_S) ≈ 90 days (3 months)
+
+```{r}
+# Literature values
+lat <- 2    # Latent period in days
+inf <- 10   # Infectious period in days
+imm <- 90   # Duration of seropositivity in days
+
+# Calculate R0 for both herds
+R0.end.herd1 <- 1 / (1 - (1 + (lat + inf)/imm) * end.eq.herd1)
+R0.end.herd2 <- 1 / (1 - (1 + (lat + inf)/imm) * end.eq.herd2)
+
+cat("R0 estimates from endemic equilibrium:\n")
+cat("Herd 1: R0 =", R0.end.herd1, "\n")
+cat("Herd 2: R0 =", R0.end.herd2, "\n")
+```
+
+(f) **What was R₀ in the two herds?**
+
+## Sensitivity analysis (Bonus)
+
+(g) **How sensitive is the estimate of R₀ to the values found in literature of the latent period, the infectious period, and the time during which cows are seropositive?**
+
+```{r}
+# Create a sensitivity analysis function
+sensitivity_r0 <- function(lat_range, inf_range, imm_range, seroprev) {
+  results <- expand.grid(
+    Latent = lat_range,
+    Infectious = inf_range,
+    Immunity = imm_range
+  )
+  
+  results$R0 <- 1 / (1 - (1 + (results$Latent + results$Infectious) / results$Immunity) * seroprev)
+  
+  return(results)
+}
+
+# Test for Herd 1
+lat_range <- seq(1, 3, by = 0.5)  # Latent period: 1-3 days
+inf_range <- seq(8, 12, by = 1)   # Infectious period: 8-12 days
+imm_range <- seq(80, 100, by = 5) # Seropositivity: 80-100 days
+
+sens_herd1 <- sensitivity_r0(lat_range, inf_range, imm_range, end.eq.herd1)
+sens_herd2 <- sensitivity_r0(lat_range, inf_range, imm_range, end.eq.herd2)
+
+# Summary of sensitivity for Herd 1
+cat("Sensitivity Analysis for Herd 1:\n")
+cat("Min R0:", min(sens_herd1$R0), "\n")
+cat("Max R0:", max(sens_herd1$R0), "\n")
+cat("Mean R0:", mean(sens_herd1$R0), "\n\n")
+
+cat("Sensitivity Analysis for Herd 2:\n")
+cat("Min R0:", min(sens_herd2$R0), "\n")
+cat("Max R0:", max(sens_herd2$R0), "\n")
+cat("Mean R0:", mean(sens_herd2$R0), "\n")
+```
+
+The sensitivity analysis shows how R₀ estimates vary with different parameter assumptions. The estimates are most sensitive to the duration of seropositivity (imm) and less sensitive to the latent and infectious periods.
+
+---
+
+# Summary and Conclusions
+
+This practical has demonstrated three complementary methods for estimating R₀ from field data:
+
+1. **Exponential growth phase**: Fast and simple when early epidemic data is available, but requires knowledge of generation time and assumes exponential growth.
+2. **Final size**: Useful for completed epidemics, independent of generation time distribution, but requires final size data and assumes homogeneous mixing.
+3. **Endemic equilibrium**: Appropriate for persistent infections, but requires seroprevalence data at steady state and knowledge of disease natural history parameters.
+
+Each method has its strengths and limitations, and the choice depends on the available data and the epidemiological context.
+
+## References
+
+- Van Schaik, G., et al. (2007). Salmonella Dublin in dairy cattle: a longitudinal study in two herds. Veterinary Research, 38, 861-869.

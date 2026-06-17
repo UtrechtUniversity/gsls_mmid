@@ -89,11 +89,17 @@ Z0 = 0
 X0 = n0 - Y0 - Z0
 
 sim <- sir.sim(n0, Y0,Z0, beta, gamma, deltat, simlength)
+```
+The epidemic curve looks like this:
+```{r}
 plot(sim$Time, sim$X, type = "l", xlab = "Time", ylab = "Number of animals",col = "green",ylim = c(0,n0))
 lines(sim$Time, sim$Y, type = "l", xlab = "Time", ylab = "Number of animals",col = "firebrick3")
 lines(sim$Time, sim$Z, type = "l", xlab = "Time", ylab = "Number of animals",col = "black")
 legend(40,60,c("X","Y","Z"),col = c("green","firebrick3", "black"),lwd = 2,seg.len = 1)
 
+```
+Plotting X against Y gives:
+```{r}
 plot(sim$X, sim$Y, type = "l", xlab = "X", ylab = "Y")
 s <- seq(length(sim$X)-1)
 suppressWarnings(arrows(x0 = sim$X[s], y0 = sim$Y[s], x1 = sim$X[s + 1], y1 = sim$Y[s + 1],length = .075)) #In the stochastic simulation sometimes no differences occur a warning can occur for zero-length arrow. This warning is suppressed.

@@ -18,13 +18,15 @@ There are two ways of using these materials:
         └── Stoch_no_Demo.R (stochastic with demography)
    ```
 or 
-2. Use the R-markdown or notebook version which includes the questions:
+2. Use the R-markdown version which includes the questions. The notebook is a preview when the markdown has been run.
 ```
     └── R
     ..  ├── PracticalDeterministic.Rmd (deterministic markdown)
         ├── PracticalDeterministic.nb (deterministic notebook)
         ├── PracticalStochastic.Rmd (deterministic markdown)
-        └── PracticalStochastic.nb (stochastic notebook)
+        ├── PracticalStochastic.nb (stochastic notebook)
+        ├── PracticalR0estimation.Rmd (markdown)
+        └── PracticalR0estimation.nb (notebook)
 ```
 
 
