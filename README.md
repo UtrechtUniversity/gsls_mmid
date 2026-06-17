@@ -9,13 +9,16 @@ There are two ways of using these materials:
    ..   ├── Practical Deterministic Models.docx
         ├── Practical Deterministic Models Answerkey.docx
         ├── Practical Stochastic Models.docx
-        └── Practical Stochastic Models Answerkey.docx
+        ├── Practical Stochastic Models Answerkey.docx
+        └──Practical_EstimationFromFieldData.pdf
    with the R-code in
    └── R
     ..  ├── Det_no_Demo.R (deterministic no demography)
         ├── Det_with_Demo.R (deterministic with demography)
         ├── Stoch_no_Demo.R (stochastic no demography)
-        └── Stoch_no_Demo.R (stochastic with demography)
+        ├── Stoch_no_Demo.R (stochastic with demography)
+        └── EstimationR0fielddata.R
+        
    ```
 or 
 2. Use the R-markdown version which includes the questions. The notebook is a preview when the markdown has been run.
